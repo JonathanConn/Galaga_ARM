@@ -1,11 +1,4 @@
-//****************************************************************************
-//
-// main.c - MSP-EXP432P401R + Educational Boosterpack MkII - Joystick
-//
-// Displays raw 14-bit ADC measurements for X/Y axis of Joystick
-//
-//****************************************************************************
- #include <ti/devices/msp432p4xx/inc/msp.h>
+#include <ti/devices/msp432p4xx/inc/msp.h>
  #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
  #include <ti/grlib/grlib.h>
  #include "LcdDriver/Crystalfontz128x128_ST7735.h"
@@ -39,6 +32,16 @@ static uint16_t left[2];
 static uint16_t top[2];
 static uint16_t right[2];
 
+struct bot{
+	int x,y,r;
+
+	
+};
+struct shot{
+	int x,y;
+};
+
+struct bot bot1;
 
 int main(void) {
   /* Halting WDT and disabling master interrupts */
@@ -108,15 +111,21 @@ int main(void) {
   MAP_ADC14_enableConversion();
   MAP_ADC14_toggleConversionTrigger();
 
+
+	bot1.x = -10;
+	bot1.y = 30;
+	bot1.r = 5; 
+
   while (1) {
 		
 		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_WHITE);
 		Graphics_drawLine(& g_sContext, 0, 107, 127, 107); 
 		
-    MAP_PCM_gotoLPM0();
-		
+		 // MAP_PCM_gotoLPM0();
   }
 }
+
+
 
 void ADC14_IRQHandler(void) {
   uint64_t status;
@@ -156,32 +165,47 @@ void ADC14_IRQHandler(void) {
 		Graphics_drawLine(& g_sContext, top[0], top[1],right[0], right[1]); //right
 		Graphics_drawLine(& g_sContext, left[0], left[1], right[0], right[1]); //bottom
 
+	 //SHOT--------------------------------
     int buttonPressed = 0;
     if (!(P3IN & GPIO_PIN5)) buttonPressed = 1;
 		
 		if(buttonPressed == 1){
 			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_RED);
 			Graphics_drawLine(& g_sContext, top[0]+1, top[1], x+1, 0);
-			
-			for(int i=100000; i>0; i--);
+		
+			for(int i=10000; i>0; i--);
 					
 			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_BLACK);
 			Graphics_drawLine(& g_sContext, top[0]+1, top[1], x+1, 0);
-			
-			
+				
+		}
+		if(buttonPressed == 1){
+				if((top[0]+1 >= (bot1.x-bot1.r)) && top[0]+1 <= (bot1.x+bot1.r))
+					score++;
 		}
 		
+		
+		//SCORE----------------------------
 		char string[10];
 		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_WHITE);
 			
 		sprintf(string, "SCORE: %d", score);
-		Graphics_drawStringCentered(&g_sContext,(int8_t *)string,AUTO_STRING_LENGTH, 30, 115,OPAQUE_TEXT);		
+		Graphics_drawStringCentered(&g_sContext,(int8_t *)string,AUTO_STRING_LENGTH, 30, 115,OPAQUE_TEXT);	
+
+		
+		//BOT---------------------------------------
+		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_BLACK);
+		Graphics_fillCircle(&g_sContext, bot1.x-1, bot1.y, bot1.r);
+		
+		bot1.x++;
+		
+		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_YELLOW);
+		Graphics_fillCircle(&g_sContext, bot1.x, bot1.y, bot1.r);
+		
+		if(bot1.x > 127+bot1.r)bot1.x = 0;
+		
+		
 		
   }
 	
 }
-
-struct bot{
-	int x, y;
-};
-
