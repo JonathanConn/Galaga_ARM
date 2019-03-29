@@ -19,7 +19,7 @@ static uint16_t OLDammo = 10;
 static uint16_t OLDscore = 0;
 
 //radius
-static uint16_t r = 10;
+static uint16_t r = 5;
 
 //velocity 
 static uint16_t v = 1;
@@ -33,15 +33,19 @@ static uint16_t top[2];
 static uint16_t right[2];
 
 struct bot{
-	int x,y,r;
+	int x,y,r,h;	
+};
 
-	
-};
 struct shot{
-	int x,y;
+	int x,y,r;
 };
+
 
 struct bot bot1;
+struct shot shots[1000];
+int sCount = 0;
+
+int bCatch = 0;
 
 int main(void) {
   /* Halting WDT and disabling master interrupts */
@@ -115,6 +119,7 @@ int main(void) {
 	bot1.x = -10;
 	bot1.y = 30;
 	bot1.r = 5; 
+	
 
   while (1) {
 		
@@ -170,21 +175,37 @@ void ADC14_IRQHandler(void) {
     if (!(P3IN & GPIO_PIN5)) buttonPressed = 1;
 		
 		if(buttonPressed == 1){
-			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_RED);
-			Graphics_drawLine(& g_sContext, top[0]+1, top[1], x+1, 0);
+			if(bCatch == 0){
+				shots[sCount].x = top[0]+1;
+				shots[sCount].y = top[1]; 
+				shots[sCount].r = 1;
+				sCount++;
+			}
+		}
+	/*	
+		for(int i = 0; i <= sCount; i++){	
+			if(shots[i].x >= (bot1.x-bot1.r) && shots[i].x <= (bot1.x+bot1.r))
+				score++;			
+		}
+		*/
+		if(bCatch >= 5)
+			bCatch = 0;
+		else
+			bCatch++;
 		
-			for(int i=10000; i>0; i--);
+		for(int i = 0; i <= sCount; i++){
+			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_WHITE);
+			Graphics_fillCircle(& g_sContext, shots[i].x, shots[i].y, shots[i].r);
 					
+		}
+		for(int j=50000; j>0; j--);
+		for(int i = 0; i <= sCount; i++){
 			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_BLACK);
-			Graphics_drawLine(& g_sContext, top[0]+1, top[1], x+1, 0);
-				
-		}
-		if(buttonPressed == 1){
-				if((top[0]+1 >= (bot1.x-bot1.r)) && top[0]+1 <= (bot1.x+bot1.r))
-					score++;
+			Graphics_fillCircle(& g_sContext, shots[i].x, shots[i].y, shots[i].r);
 		}
 		
-		
+		for(int i = 0; i <= sCount; i++)shots[i].y--;
+			
 		//SCORE----------------------------
 		char string[10];
 		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_WHITE);
@@ -204,8 +225,7 @@ void ADC14_IRQHandler(void) {
 		
 		if(bot1.x > 127+bot1.r)bot1.x = 0;
 		
-		
-		
+			
   }
 	
 }
