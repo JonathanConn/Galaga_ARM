@@ -87,7 +87,7 @@ int main(void) {
   MAP_ADC14_enableModule();
   MAP_ADC14_initModule(ADC_CLOCKSOURCE_ADCOSC, ADC_PREDIVIDER_64, ADC_DIVIDER_8, 0);
 
-  /* Configuring ADC Memory (ADC_MEM0 - ADC_MEM1 (A15, A9) with repeat)
+  /* Configuring ADC Memory (ADC_MEM0 - ADC_MEM1 (A , A9) with repeat)
    * with internal 2.5v reference */
   MAP_ADC14_configureMultiSequenceMode(ADC_MEM0, ADC_MEM1, true);
   MAP_ADC14_configureConversionMemory(ADC_MEM0,
@@ -174,6 +174,7 @@ void ADC14_IRQHandler(void) {
     int buttonPressed = 0;
     if (!(P3IN & GPIO_PIN5)) buttonPressed = 1;
 		
+		//creates a new shot object at ship pos
 		if(buttonPressed == 1){
 			if(bCatch == 0){
 				shots[sCount].x = top[0]+1;
@@ -182,12 +183,8 @@ void ADC14_IRQHandler(void) {
 				sCount++;
 			}
 		}
-	/*	
-		for(int i = 0; i <= sCount; i++){	
-			if(shots[i].x >= (bot1.x-bot1.r) && shots[i].x <= (bot1.x+bot1.r))
-				score++;			
-		}
-		*/
+	
+		//limits fire rate of the button + for slower - for faster 
 		if(bCatch >= 5)
 			bCatch = 0;
 		else
@@ -204,9 +201,16 @@ void ADC14_IRQHandler(void) {
 			Graphics_fillCircle(& g_sContext, shots[i].x, shots[i].y, shots[i].r);
 		}
 		
-		for(int i = 0; i <= sCount; i++)shots[i].y--;
+		for(int i = 0; i <= sCount; i++)shots[i].y -= 2;
 			
 		//SCORE----------------------------
+		
+		for(int i = 0; i <= sCount; i++){	
+			if(shots[i].x >= (bot1.x-bot1.r) && shots[i].x <= (bot1.x+bot1.r))
+				if(shots[i].y >= (bot1.y-bot1.r) && shots[i].y <= (bot1.y+bot1.r))
+					score++;			
+		}
+		
 		char string[10];
 		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_WHITE);
 			
