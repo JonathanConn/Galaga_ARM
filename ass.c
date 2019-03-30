@@ -32,6 +32,11 @@ static uint16_t left[2];
 static uint16_t top[2];
 static uint16_t right[2];
 
+//traingle for bot 
+static uint16_t BOTleft[2];
+static uint16_t BOTtop[2];
+static uint16_t BOTright[2];
+
 struct bot{
 	int x,y,r,h;	
 };
@@ -116,7 +121,7 @@ int main(void) {
   MAP_ADC14_toggleConversionTrigger();
 
 
-	bot1.x = -10;
+	bot1.x = 50;
 	bot1.y = 30;
 	bot1.r = 5; 
 	
@@ -137,21 +142,23 @@ void ADC14_IRQHandler(void) {
 
   status = MAP_ADC14_getEnabledInterruptStatus();
   MAP_ADC14_clearInterruptFlag(status);
-
+	
   if (status & ADC_INT1) {
-
-    x = ADC14_getResult(ADC_MEM0) / 135;
+		//pasing input data from joystick 
+		x = ADC14_getResult(ADC_MEM0) / 135;
 		if (x + r >= 127) x = 127 - r;
     if (x <= r) x = r;
 		
+		//the y for our ship never changes 
 		y = 127 - (r+25);
 		
-	 if( (oldXY[0] != x) || (oldXY[1] != y) ){	
-    Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_BLACK);
-		Graphics_drawLine(& g_sContext, left[0], left[1], top[0], top[1]); //left
-		Graphics_drawLine(& g_sContext, top[0], top[1],right[0], right[1]); //right
-		Graphics_drawLine(& g_sContext, left[0], left[1], right[0], right[1]); //bottom
-	 }
+		//only redraws if ship moves to prevent flickering  
+	  if( (oldXY[0] != x) || (oldXY[1] != y) ){	
+			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_BLACK);
+			Graphics_drawLine(& g_sContext, left[0], left[1], top[0], top[1]); //left
+			Graphics_drawLine(& g_sContext, top[0], top[1],right[0], right[1]); //right
+			Graphics_drawLine(& g_sContext, left[0], left[1], right[0], right[1]); //bottom
+	  }
 
     oldXY[0] = x;
     oldXY[1] = y;
@@ -190,10 +197,10 @@ void ADC14_IRQHandler(void) {
 		else
 			bCatch++;
 		
+		//draws each shot in struct array 
 		for(int i = 0; i <= sCount; i++){
 			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_WHITE);
-			Graphics_fillCircle(& g_sContext, shots[i].x, shots[i].y, shots[i].r);
-					
+			Graphics_fillCircle(& g_sContext, shots[i].x, shots[i].y, shots[i].r);		
 		}
 		for(int j=50000; j>0; j--);
 		for(int i = 0; i <= sCount; i++){
@@ -201,14 +208,18 @@ void ADC14_IRQHandler(void) {
 			Graphics_fillCircle(& g_sContext, shots[i].x, shots[i].y, shots[i].r);
 		}
 		
+		//changes y pos for each shot 
 		for(int i = 0; i <= sCount; i++)shots[i].y -= 2;
 			
 		//SCORE----------------------------
 		
+		//if a shot is within the x y bounds it adds to score
 		for(int i = 0; i <= sCount; i++){	
 			if(shots[i].x >= (bot1.x-bot1.r) && shots[i].x <= (bot1.x+bot1.r))
-				if(shots[i].y >= (bot1.y-bot1.r) && shots[i].y <= (bot1.y+bot1.r))
-					score++;			
+				if(shots[i].y >= (bot1.y-bot1.r) && shots[i].y <= (bot1.y+bot1.r)){
+					if(score >= 99) score = 0;
+					score++;
+				}
 		}
 		
 		char string[10];
@@ -218,16 +229,27 @@ void ADC14_IRQHandler(void) {
 		Graphics_drawStringCentered(&g_sContext,(int8_t *)string,AUTO_STRING_LENGTH, 30, 115,OPAQUE_TEXT);	
 
 		
-		//BOT---------------------------------------
+		//BOT---------------------------------------		
 		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_BLACK);
-		Graphics_fillCircle(&g_sContext, bot1.x-1, bot1.y, bot1.r);
+		Graphics_drawLine(& g_sContext, BOTleft[0], BOTleft[1], BOTtop[0], BOTtop[1]); //left
+		Graphics_drawLine(& g_sContext, BOTtop[0], BOTtop[1],BOTright[0], BOTright[1]); //right
+		Graphics_drawLine(& g_sContext, BOTleft[0], BOTleft[1], BOTright[0], BOTright[1]); //bottom	
+	
+		BOTleft[0] = bot1.x - bot1.r;
+		BOTleft[1] = bot1.y - bot1.r;
 		
-		bot1.x++;
+		BOTtop[0] = bot1.x;
+		BOTtop[1] = bot1.y + bot1.r;
 		
-		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_YELLOW);
-		Graphics_fillCircle(&g_sContext, bot1.x, bot1.y, bot1.r);
+		BOTright[0] = bot1.x + bot1.r;
+		BOTright[1] = bot1.y - bot1.r;
 		
-		if(bot1.x > 127+bot1.r)bot1.x = 0;
+		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_RED);
+		Graphics_drawLine(& g_sContext, BOTleft[0], BOTleft[1], BOTtop[0], BOTtop[1]); //left
+		Graphics_drawLine(& g_sContext, BOTtop[0], BOTtop[1],BOTright[0], BOTright[1]); //right
+		Graphics_drawLine(& g_sContext, BOTleft[0], BOTleft[1], BOTright[0], BOTright[1]); //bottom
+			
+		
 		
 			
   }
