@@ -1,8 +1,9 @@
-#include <ti/devices/msp432p4xx/inc/msp.h>
+ #include <ti/devices/msp432p4xx/inc/msp.h>
  #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
  #include <ti/grlib/grlib.h>
  #include "LcdDriver/Crystalfontz128x128_ST7735.h"
  #include <stdio.h>
+ #include <stdbool.h>
 
   /* Graphic library context */
   Graphics_Context g_sContext;
@@ -32,13 +33,9 @@ static uint16_t left[2];
 static uint16_t top[2];
 static uint16_t right[2];
 
-//traingle for bot 
-static uint16_t BOTleft[2];
-static uint16_t BOTtop[2];
-static uint16_t BOTright[2];
-
 struct bot{
-	int x,y,r,h;	
+	int x,y,r;
+	bool d;
 };
 
 struct shot{
@@ -46,7 +43,9 @@ struct shot{
 };
 
 
-struct bot bot1;
+struct bot bots[10];
+int bCount = 0;
+
 struct shot shots[1000];
 int sCount = 0;
 
@@ -121,10 +120,15 @@ int main(void) {
   MAP_ADC14_toggleConversionTrigger();
 
 
-	bot1.x = 50;
-	bot1.y = 30;
-	bot1.r = 5; 
-	
+	for(int i = 0; i < 5; i++){
+		bots[i].r = 3; 
+		bots[i].x = -10 +(i*bots[i].r*bots[i].r) ;
+		bots[i].y = 30;
+		bots[i].d = true;
+		
+		bCount++;
+	}
+
 
   while (1) {
 		
@@ -142,23 +146,21 @@ void ADC14_IRQHandler(void) {
 
   status = MAP_ADC14_getEnabledInterruptStatus();
   MAP_ADC14_clearInterruptFlag(status);
-	
+
   if (status & ADC_INT1) {
-		//pasing input data from joystick 
-		x = ADC14_getResult(ADC_MEM0) / 135;
+
+    x = ADC14_getResult(ADC_MEM0) / 135;
 		if (x + r >= 127) x = 127 - r;
     if (x <= r) x = r;
 		
-		//the y for our ship never changes 
 		y = 127 - (r+25);
 		
-		//only redraws if ship moves to prevent flickering  
-	  if( (oldXY[0] != x) || (oldXY[1] != y) ){	
-			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_BLACK);
-			Graphics_drawLine(& g_sContext, left[0], left[1], top[0], top[1]); //left
-			Graphics_drawLine(& g_sContext, top[0], top[1],right[0], right[1]); //right
-			Graphics_drawLine(& g_sContext, left[0], left[1], right[0], right[1]); //bottom
-	  }
+	 if( (oldXY[0] != x) || (oldXY[1] != y) ){	
+    Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_BLACK);
+		Graphics_drawLine(& g_sContext, left[0], left[1], top[0], top[1]); //left
+		Graphics_drawLine(& g_sContext, top[0], top[1],right[0], right[1]); //right
+		Graphics_drawLine(& g_sContext, left[0], left[1], right[0], right[1]); //bottom
+	 }
 
     oldXY[0] = x;
     oldXY[1] = y;
@@ -197,10 +199,10 @@ void ADC14_IRQHandler(void) {
 		else
 			bCatch++;
 		
-		//draws each shot in struct array 
 		for(int i = 0; i <= sCount; i++){
 			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_WHITE);
-			Graphics_fillCircle(& g_sContext, shots[i].x, shots[i].y, shots[i].r);		
+			Graphics_fillCircle(& g_sContext, shots[i].x, shots[i].y, shots[i].r);
+					
 		}
 		for(int j=50000; j>0; j--);
 		for(int i = 0; i <= sCount; i++){
@@ -208,18 +210,16 @@ void ADC14_IRQHandler(void) {
 			Graphics_fillCircle(& g_sContext, shots[i].x, shots[i].y, shots[i].r);
 		}
 		
-		//changes y pos for each shot 
 		for(int i = 0; i <= sCount; i++)shots[i].y -= 2;
 			
 		//SCORE----------------------------
 		
-		//if a shot is within the x y bounds it adds to score
-		for(int i = 0; i <= sCount; i++){	
-			if(shots[i].x >= (bot1.x-bot1.r) && shots[i].x <= (bot1.x+bot1.r))
-				if(shots[i].y >= (bot1.y-bot1.r) && shots[i].y <= (bot1.y+bot1.r)){
-					if(score >= 99) score = 0;
-					score++;
-				}
+		for(int i = 0; i <= sCount; i++){
+			for(int j = 0; j <= bCount; j++){
+				if(shots[i].x >= (bots[j].x-bots[j].r) && shots[i].x <= (bots[j].x+bots[j].r))
+					if(shots[i].y >= (bots[j].y-bots[j].r) && shots[i].y <= (bots[j].y+bots[j].r))
+						score++;		
+			}
 		}
 		
 		char string[10];
@@ -229,29 +229,31 @@ void ADC14_IRQHandler(void) {
 		Graphics_drawStringCentered(&g_sContext,(int8_t *)string,AUTO_STRING_LENGTH, 30, 115,OPAQUE_TEXT);	
 
 		
-		//BOT---------------------------------------		
-		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_BLACK);
-		Graphics_drawLine(& g_sContext, BOTleft[0], BOTleft[1], BOTtop[0], BOTtop[1]); //left
-		Graphics_drawLine(& g_sContext, BOTtop[0], BOTtop[1],BOTright[0], BOTright[1]); //right
-		Graphics_drawLine(& g_sContext, BOTleft[0], BOTleft[1], BOTright[0], BOTright[1]); //bottom	
-	
-		BOTleft[0] = bot1.x - bot1.r;
-		BOTleft[1] = bot1.y - bot1.r;
+		//BOT---------------------------------------
 		
-		BOTtop[0] = bot1.x;
-		BOTtop[1] = bot1.y + bot1.r;
+		for(int i = 0; i <= bCount; i++){
+			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_BLACK);
+				if(bots[i].d == true)
+					Graphics_fillCircle(&g_sContext, bots[i].x-1, bots[i].y, bots[i].r);
+				else 
+					Graphics_fillCircle(&g_sContext, bots[i].x+1, bots[i].y, bots[i].r);
+		}
 		
-		BOTright[0] = bot1.x + bot1.r;
-		BOTright[1] = bot1.y - bot1.r;
+		for(int i = 0; i <= bCount; i++){		
+			if(bots[i].d == true)
+				bots[i].x++;
+			else
+				bots[i].x--;
+		}
 		
-		Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_RED);
-		Graphics_drawLine(& g_sContext, BOTleft[0], BOTleft[1], BOTtop[0], BOTtop[1]); //left
-		Graphics_drawLine(& g_sContext, BOTtop[0], BOTtop[1],BOTright[0], BOTright[1]); //right
-		Graphics_drawLine(& g_sContext, BOTleft[0], BOTleft[1], BOTright[0], BOTright[1]); //bottom
-			
+		for(int i = 0; i <= bCount; i++){
+			Graphics_setForegroundColor( & g_sContext, GRAPHICS_COLOR_YELLOW);
+			Graphics_fillCircle(&g_sContext, bots[i].x, bots[i].y, bots[i].r);
+		}
 		
-		
-			
+		for(int i = 0; i <= bCount; i++)
+			if(bots[i].x >= 100 && bots[i].d == true) bots[i].d = false;
+			else if(bots[i].x < 20 && bots[i].d == false) bots[i].d = true;
   }
 	
 }
